@@ -51,6 +51,8 @@
 volatile uint16_t ADC_Value[HW_ADC_CHANNELS + HW_ADC_CHANNELS_EXTRA];
 volatile float ADC_curr_norm_value[6];
 
+double mul_pos = 0.0;
+
 typedef struct {
 	mc_configuration m_conf;
 	mc_fault_code m_fault_now;
@@ -1464,6 +1466,8 @@ float mc_interface_get_pid_pos_set(void) {
 
 float mc_interface_get_pid_pos_now(void) {
 	float ret = 0.0;
+	static float last_pos = 0.0;
+	static int pos_base = 0;
 
 	volatile mc_configuration *conf = &motor_now()->m_conf;
 
@@ -1490,6 +1494,16 @@ float mc_interface_get_pid_pos_now(void) {
 	ret *= DIR_MULT;
 	ret -= motor_now()->m_conf.p_pid_offset;
 	utils_norm_angle(&ret);
+
+	if (ret - last_pos > 180.0) {
+		pos_base -= 360;
+	} else if (ret - last_pos < -180.0) {
+		pos_base += 360;
+	}
+
+	last_pos = ret;
+
+	mul_pos = pos_base + ret;
 
 	return ret;
 }
