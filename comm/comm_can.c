@@ -1159,6 +1159,7 @@ void comm_can_send_status1(uint8_t id, bool replace) {
 	int32_t send_index = 0;
 	uint8_t buffer[8];
 	buffer_append_int32(buffer, (int32_t)mc_interface_get_rpm(), &send_index);
+	mc_interface_get_pid_pos_now();
 	buffer_append_int32(buffer, (int32_t)(mul_pos * (double)50.0), &send_index);
 	comm_can_transmit_eid_replace(id | ((uint32_t)CAN_PACKET_STATUS << 8),
 			buffer, send_index, replace, 0);
