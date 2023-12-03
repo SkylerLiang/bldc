@@ -44,9 +44,20 @@
 
 // Private variables
 static int mul_pos_base = 0;
-static double mul_pos = 0;
+static float mul_pos = 0;
 float pos_temp = 0;
 float pos_temp_pre = 0;
+int sampled_points = 0;
+uint8_t finish_flag = 0;
+float brake_pos = 0;
+float brake_speed = 0;
+
+extern float limit_speed;
+extern float target_speed;
+extern float limit_pos;
+extern int sample_points;
+extern float brake_current;
+extern CUSTOM_MODE custom_mode;
 
 static volatile bool m_dccal_done = false;
 static volatile float m_last_adc_isr_duration;
@@ -3505,11 +3516,70 @@ void mcpwm_foc_adc_int_handler(void *p, uint32_t flags) {
 	m_isr_motor = 0;
 	m_last_adc_isr_duration = timer_seconds_elapsed_since(t_start);
 
+	// Calculate the position of multiple turns
 	pos_temp = mc_interface_get_pid_pos_now();
 	if (pos_temp > 270 && pos_temp_pre < 90)
 		mul_pos_base -= 360;
 	else if (pos_temp < 90 && pos_temp_pre > 270)
 		mul_pos_base += 360;
+	pos_temp_pre = pos_temp;
+	mul_pos = mul_pos_base + pos_temp;
+
+	// Custom mode
+	if (custom_mode == CUSTOM_MODE_NONE) {
+		finish_flag = 0;
+		sampled_points = 0;
+	} else if (custom_mode == CUSTOM_MODE_1) {
+		if (finish_flag == 0) {
+			switch (motor_now->m_control_mode) {
+			case CONTROL_MODE_CURRENT:
+				if (mc_interface_get_rpm() >= target_speed) {
+					sampled_points++;
+					if (sampled_points >= sample_points) {
+						mc_interface_set_brake_current(brake_current);
+						brake_pos = mul_pos;
+						brake_speed = mc_interface_get_rpm();
+						sampled_points = 0;
+						finish_flag = 1;
+					}
+				} else
+					sampled_points = 0;
+				break;
+			default:
+				break;
+			}
+		}
+	} else if (custom_mode == CUSTOM_MODE_2) {
+		if (finish_flag == 0) {
+			switch (motor_now->m_control_mode) {
+			case CONTROL_MODE_CURRENT:
+				if (mc_interface_get_rpm() >= limit_speed) {
+					sampled_points++;
+					if (sampled_points >= sample_points) {
+						mc_interface_set_pid_speed(target_speed);
+						sampled_points = 0;
+					}
+				} else
+					sampled_points = 0;
+				break;
+			case CONTROL_MODE_SPEED:
+				if (mul_pos >= limit_pos) {
+					sampled_points++;
+					if (sampled_points >= sample_points) {
+						mc_interface_set_brake_current(brake_current);
+						brake_pos = mul_pos;
+						brake_speed = mc_interface_get_rpm();
+						sampled_points = 0;
+						finish_flag = 1;
+					}
+				} else
+					sampled_points = 0;
+				break;
+			default:
+				break;
+			}
+		}
+	}
 }
 
 // Private functions

@@ -45,11 +45,13 @@
 #include "lispif.h"
 #endif
 
-float limit_speed = 0.0f;
-float target_speed = 0.0f;
-float limit_pos = 0.0f;
+float accel_current = 50.0f;
+float limit_speed = 5000.0f;
+float target_speed = 5000.0f;
+float limit_pos = 3600.0f;
 int sample_points = 1;
-int custom_mode = 0;
+float brake_current = 50.0f;
+CUSTOM_MODE custom_mode = CUSTOM_MODE_NONE;
 
 // Settings
 #define RX_FRAMES_SIZE	50
@@ -1565,6 +1567,12 @@ static void decode_msg(uint32_t eid, uint8_t *data8, int len, bool is_replaced) 
 			timeout_reset();
 			break;
 
+		case CAN_PACKET_SET_ACCEL_CURRENT:
+			ind = 0;
+			accel_current =(buffer_get_float32(data8, 1e3, &ind));
+			timeout_reset();
+			break;
+
 		case CAN_PACKET_SET_LIMIT_SPEED:
 			ind = 0;
 			limit_speed = (buffer_get_float32(data8, 1e0, &ind));
@@ -1589,9 +1597,18 @@ static void decode_msg(uint32_t eid, uint8_t *data8, int len, bool is_replaced) 
 			timeout_reset();
 			break;
 
+		case CAN_PACKET_SET_BRAKE_CURRENT:
+			ind = 0;
+			brake_current = (buffer_get_float32(data8, 1e3, &ind));
+			timeout_reset();
+			break;
+
 		case CAN_PACKET_SET_CUSTOM_MODE:
 			ind = 0;
-			custom_mode = (buffer_get_int32(data8, &ind));
+			int temp = (buffer_get_int32(data8, &ind));
+			if (temp >= 0 && custom_mode == CUSTOM_MODE_NONE)
+				mc_interface_set_current(accel_current);
+			custom_mode = ((CUSTOM_MODE)temp);
 			timeout_reset();
 			break;
 
