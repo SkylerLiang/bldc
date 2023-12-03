@@ -43,6 +43,11 @@
 #include "foc_math.h"
 
 // Private variables
+static int mul_pos_base = 0;
+static double mul_pos = 0;
+float pos_temp = 0;
+float pos_temp_pre = 0;
+
 static volatile bool m_dccal_done = false;
 static volatile float m_last_adc_isr_duration;
 static volatile bool m_init_done = false;
@@ -3499,6 +3504,12 @@ void mcpwm_foc_adc_int_handler(void *p, uint32_t flags) {
 
 	m_isr_motor = 0;
 	m_last_adc_isr_duration = timer_seconds_elapsed_since(t_start);
+
+	pos_temp = mc_interface_get_pid_pos_now();
+	if (pos_temp > 270 && pos_temp_pre < 90)
+		mul_pos_base -= 360;
+	else if (pos_temp < 90 && pos_temp_pre > 270)
+		mul_pos_base += 360;
 }
 
 // Private functions

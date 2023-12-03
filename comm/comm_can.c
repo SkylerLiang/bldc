@@ -45,6 +45,12 @@
 #include "lispif.h"
 #endif
 
+float limit_speed = 0.0f;
+float target_speed = 0.0f;
+float limit_pos = 0.0f;
+int sample_points = 1;
+int custom_mode = 0;
+
 // Settings
 #define RX_FRAMES_SIZE	50
 #define RX_BUFFER_NUM	3
@@ -1556,6 +1562,41 @@ static void decode_msg(uint32_t eid, uint8_t *data8, int len, bool is_replaced) 
 		case CAN_PACKET_SET_POS:
 			ind = 0;
 			mc_interface_set_pid_pos(buffer_get_float32(data8, 1e6, &ind));
+			timeout_reset();
+			break;
+
+		case CAN_PACKET_SET_LIMIT_SPEED:
+			ind = 0;
+			limit_speed = (buffer_get_float32(data8, 1e0, &ind));
+			timeout_reset();
+			break;
+
+		case CAN_PACKET_SET_TARGET_SPEED:
+			ind = 0;
+			target_speed = (buffer_get_float32(data8, 1e0, &ind));
+			timeout_reset();
+			break;
+
+		case CAN_PACKET_SET_LIMIT_POS:
+			ind = 0;
+			limit_pos = (buffer_get_float32(data8, 50, &ind));
+			timeout_reset();
+			break;
+
+		case CAN_PACKET_SET_SAMPLE_POINTS:
+			ind = 0;
+			sample_points = (buffer_get_int32(data8, &ind));
+			timeout_reset();
+			break;
+
+		case CAN_PACKET_SET_CUSTOM_MODE:
+			ind = 0;
+			custom_mode = (buffer_get_int32(data8, &ind));
+			timeout_reset();
+			break;
+
+		case CAN_PACKET_ALIVE:
+			ind = 0;
 			timeout_reset();
 			break;
 
