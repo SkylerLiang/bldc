@@ -43,14 +43,17 @@
 #include "foc_math.h"
 
 // Private variables
-static int mul_pos_base = 0;
-static float mul_pos = 0;
+int mul_pos_base = 0;
+float mul_pos = 0;
 float pos_temp = 0;
 float pos_temp_pre = 0;
 int sampled_points = 0;
 uint8_t finish_flag = 0;
 float brake_pos = 0;
 float brake_speed = 0;
+uint8_t state_now = 0;
+float max_speed_record = 0;
+float max_speed_pos_record = 0;
 
 extern float limit_speed;
 extern float target_speed;
@@ -3525,14 +3528,23 @@ void mcpwm_foc_adc_int_handler(void *p, uint32_t flags) {
 	pos_temp_pre = pos_temp;
 	mul_pos = mul_pos_base + pos_temp;
 
+	// Record max speed
+	if (mc_interface_get_rpm() > max_speed_record) {
+		max_speed_record = mc_interface_get_rpm();
+		max_speed_pos_record = mul_pos;
+	}
+		
+
 	// Custom mode
 	if (custom_mode == CUSTOM_MODE_NONE) {
 		finish_flag = 0;
 		sampled_points = 0;
+		max_speed_record = 0;
+		max_speed_pos_record = 0;
 	} else if (custom_mode == CUSTOM_MODE_1) {
 		if (finish_flag == 0) {
-			switch (motor_now->m_control_mode) {
-			case CONTROL_MODE_CURRENT:
+			switch (state_now) {
+			case 1:
 				if (mc_interface_get_rpm() >= target_speed) {
 					sampled_points++;
 					if (sampled_points >= sample_points) {
@@ -3541,6 +3553,7 @@ void mcpwm_foc_adc_int_handler(void *p, uint32_t flags) {
 						brake_speed = mc_interface_get_rpm();
 						sampled_points = 0;
 						finish_flag = 1;
+						state_now = 0;
 					}
 				} else
 					sampled_points = 0;
@@ -3551,18 +3564,19 @@ void mcpwm_foc_adc_int_handler(void *p, uint32_t flags) {
 		}
 	} else if (custom_mode == CUSTOM_MODE_2) {
 		if (finish_flag == 0) {
-			switch (motor_now->m_control_mode) {
-			case CONTROL_MODE_CURRENT:
+			switch (state_now) {
+			case 1:
 				if (mc_interface_get_rpm() >= limit_speed) {
 					sampled_points++;
 					if (sampled_points >= sample_points) {
 						mc_interface_set_pid_speed(target_speed);
 						sampled_points = 0;
+						state_now++;
 					}
 				} else
 					sampled_points = 0;
 				break;
-			case CONTROL_MODE_SPEED:
+			case 2:
 				if (mul_pos >= limit_pos) {
 					sampled_points++;
 					if (sampled_points >= sample_points) {
@@ -3571,6 +3585,7 @@ void mcpwm_foc_adc_int_handler(void *p, uint32_t flags) {
 						brake_speed = mc_interface_get_rpm();
 						sampled_points = 0;
 						finish_flag = 1;
+						state_now = 0;
 					}
 				} else
 					sampled_points = 0;

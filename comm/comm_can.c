@@ -53,6 +53,14 @@ int sample_points = 1;
 float brake_current = 50.0f;
 CUSTOM_MODE custom_mode = CUSTOM_MODE_NONE;
 
+extern float mul_pos;
+extern float brake_pos;
+extern float brake_speed;
+extern uint8_t finish_flag;
+extern uint8_t state_now;
+extern float max_speed_record;
+extern float max_speed_pos_record;
+
 // Settings
 #define RX_FRAMES_SIZE	50
 #define RX_BUFFER_NUM	3
@@ -1162,20 +1170,19 @@ CANRxFrame *comm_can_get_rx_frame(int interface) {
 }
 
 void comm_can_send_status1(uint8_t id, bool replace) {
-	int32_t send_index = 0;
-	uint8_t buffer[8];
-	buffer_append_int32(buffer, (int32_t)mc_interface_get_rpm(), &send_index);
-	buffer_append_int16(buffer, (int16_t)(mc_interface_get_tot_current_filtered() * 1e1), &send_index);
-	buffer_append_int16(buffer, (int16_t)(mc_interface_get_duty_cycle_now() * 1e3), &send_index);
-	comm_can_transmit_eid_replace(id | ((uint32_t)CAN_PACKET_STATUS << 8),
-			buffer, send_index, replace, 0);
+    int32_t send_index = 0;
+    uint8_t buffer[8];
+    buffer_append_int32(buffer, (int32_t)mc_interface_get_rpm(), &send_index);
+    buffer_append_int32(buffer, (int32_t)(mul_pos * 50.0), &send_index);
+    comm_can_transmit_eid_replace(id | ((uint32_t)CAN_PACKET_STATUS << 8),
+            buffer, send_index, replace, 0);
 }
 
 void comm_can_send_status2(uint8_t id, bool replace) {
 	int32_t send_index = 0;
 	uint8_t buffer[8];
-	buffer_append_int32(buffer, (int32_t)(mc_interface_get_amp_hours(false) * 1e4), &send_index);
-	buffer_append_int32(buffer, (int32_t)(mc_interface_get_amp_hours_charged(false) * 1e4), &send_index);
+	buffer_append_int32(buffer, (int32_t)brake_speed, &send_index);
+	buffer_append_int32(buffer, (int32_t)(brake_pos * 50.0), &send_index);
 	comm_can_transmit_eid_replace(id | ((uint32_t)CAN_PACKET_STATUS_2 << 8),
 			buffer, send_index, replace, 0);
 }
@@ -1183,8 +1190,8 @@ void comm_can_send_status2(uint8_t id, bool replace) {
 void comm_can_send_status3(uint8_t id, bool replace) {
 	int32_t send_index = 0;
 	uint8_t buffer[8];
-	buffer_append_int32(buffer, (int32_t)(mc_interface_get_watt_hours(false) * 1e4), &send_index);
-	buffer_append_int32(buffer, (int32_t)(mc_interface_get_watt_hours_charged(false) * 1e4), &send_index);
+	buffer_append_int32(buffer, (int32_t)max_speed_record, &send_index);
+	buffer_append_int32(buffer, (int32_t)(max_speed_pos_record * 50.0), &send_index);
 	comm_can_transmit_eid_replace(id | ((uint32_t)CAN_PACKET_STATUS_3 << 8),
 			buffer, send_index, replace, 0);
 }
@@ -1606,8 +1613,10 @@ static void decode_msg(uint32_t eid, uint8_t *data8, int len, bool is_replaced) 
 		case CAN_PACKET_SET_CUSTOM_MODE:
 			ind = 0;
 			int temp = (buffer_get_int32(data8, &ind));
-			if (temp >= 0 && custom_mode == CUSTOM_MODE_NONE)
+			if (temp >= 0 && custom_mode == CUSTOM_MODE_NONE && state_now == 0) {
 				mc_interface_set_current(accel_current);
+				state_now++;
+			}
 			custom_mode = ((CUSTOM_MODE)temp);
 			timeout_reset();
 			break;
