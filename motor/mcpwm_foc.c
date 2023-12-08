@@ -54,6 +54,8 @@ float brake_speed = 0;
 uint8_t state_now = 0;
 float max_speed_record = 0;
 float max_speed_pos_record = 0;
+float reset_pos = 0;
+float reset_pos_deadband = 0.2;
 
 extern float limit_speed;
 extern float target_speed;
@@ -61,6 +63,7 @@ extern float limit_pos;
 extern int sample_points;
 extern float brake_current;
 extern CUSTOM_MODE custom_mode;
+extern float reset_pos_sample_points;
 
 static volatile bool m_dccal_done = false;
 static volatile float m_last_adc_isr_duration;
@@ -3583,6 +3586,36 @@ void mcpwm_foc_adc_int_handler(void *p, uint32_t flags) {
 						mc_interface_set_brake_current(brake_current);
 						brake_pos = mul_pos;
 						brake_speed = mc_interface_get_rpm();
+						sampled_points = 0;
+						finish_flag = 1;
+						state_now = 0;
+					}
+				} else
+					sampled_points = 0;
+				break;
+			default:
+				break;
+			}
+		}
+	} else if (custom_mode == CUSTOM_MODE_3) {
+		if (finish_flag == 0) {
+			switch (state_now) {
+			case 1:
+				if (mul_pos <= 180 && mul_pos >= -180) {
+					sampled_points++;
+					if (sampled_points >= sample_points) {
+						mc_interface_set_pid_pos(reset_pos);
+						sampled_points = 0;
+						state_now++;
+					}
+				} else
+					sampled_points = 0;
+				break;
+			case 2:
+				if (mul_pos <= reset_pos + reset_pos_deadband && mul_pos >= reset_pos - reset_pos_deadband) {
+					sampled_points++;
+					if (sampled_points >= reset_pos_sample_points) {
+						mc_interface_set_brake_current(brake_current);
 						sampled_points = 0;
 						finish_flag = 1;
 						state_now = 0;

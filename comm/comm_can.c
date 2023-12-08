@@ -52,6 +52,8 @@ float limit_pos = 3600.0f;
 int sample_points = 1;
 float brake_current = 50.0f;
 CUSTOM_MODE custom_mode = CUSTOM_MODE_NONE;
+float reset_pos_sample_points = 10;
+float reset_speed = 1000;
 
 extern float mul_pos;
 extern float brake_pos;
@@ -1613,9 +1615,21 @@ static void decode_msg(uint32_t eid, uint8_t *data8, int len, bool is_replaced) 
 		case CAN_PACKET_SET_CUSTOM_MODE:
 			ind = 0;
 			int temp = (buffer_get_int32(data8, &ind));
-			if (temp >= 0 && custom_mode == CUSTOM_MODE_NONE && state_now == 0) {
-				mc_interface_set_current(accel_current);
-				state_now++;
+			if (custom_mode == CUSTOM_MODE_NONE && state_now == 0)
+			{
+				switch (temp) {
+				case 1:
+				case 2:
+					state_now++;
+					mc_interface_set_current(accel_current);
+					break;
+				case 3:
+					state_now++;
+					mc_interface_set_pid_speed(-reset_speed);
+					break;
+				default:
+					break;
+				}
 			}
 			custom_mode = ((CUSTOM_MODE)temp);
 			timeout_reset();
