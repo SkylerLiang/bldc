@@ -52,8 +52,8 @@ float limit_pos = 3600.0f;
 int sample_points = 1;
 float brake_current = 50.0f;
 CUSTOM_MODE custom_mode = CUSTOM_MODE_NONE;
-float reset_pos_sample_points = 10;
-float reset_speed = 1000;
+int reset_pos_sample_points = 1000;
+float reset_speed = 5000;
 
 extern float mul_pos;
 extern float brake_pos;
@@ -1637,6 +1637,18 @@ static void decode_msg(uint32_t eid, uint8_t *data8, int len, bool is_replaced) 
 
 		case CAN_PACKET_ALIVE:
 			ind = 0;
+			timeout_reset();
+			break;
+
+		case CAN_PACKET_SET_RESET_SPEED:
+			ind = 0;
+			reset_speed = (buffer_get_float32(data8, 1e0, &ind));
+			timeout_reset();
+			break;
+
+		case CAN_PACKET_SET_RESET_POS_SAMPLE_POINTS:
+			ind = 0;
+			reset_pos_sample_points = (buffer_get_int32(data8, &ind));
 			timeout_reset();
 			break;
 
