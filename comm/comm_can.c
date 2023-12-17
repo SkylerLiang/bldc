@@ -52,7 +52,7 @@ float limit_pos = 3600.0f;
 int sample_points = 1;
 float brake_current = 50.0f;
 CUSTOM_MODE custom_mode = CUSTOM_MODE_NONE;
-int reset_pos_sample_points = 1000;
+int reset_pos_sample_points = 10000;
 float reset_speed = 5000;
 
 extern float mul_pos;
