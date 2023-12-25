@@ -45,15 +45,15 @@
 #include "lispif.h"
 #endif
 
-float accel_current = 50.0f;
-float limit_speed = 5000.0f;
-float target_speed = 5000.0f;
-float limit_pos = 3600.0f;
+float accel_current = 60.0f;
+float limit_speed = 20000.0f;
+float target_speed = 20000.0f;
+float limit_pos = 2000.0f;
 int sample_points = 1;
-float brake_current = 50.0f;
+float brake_current = 60.0f;
 CUSTOM_MODE custom_mode = CUSTOM_MODE_NONE;
 int reset_pos_sample_points = 10000;
-float reset_speed = 5000;
+float reset_speed = 1000;
 
 extern float mul_pos;
 extern float brake_pos;
