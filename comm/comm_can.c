@@ -67,6 +67,8 @@ extern float max_speed_pos_record;
 extern int16_t speed_record[3000];
 extern uint16_t record_counter;
 
+extern float dI;
+
 // Settings
 #define RX_FRAMES_SIZE	50
 #define RX_BUFFER_NUM	3
@@ -1594,6 +1596,7 @@ static void decode_msg(uint32_t eid, uint8_t *data8, int len, bool is_replaced) 
 		case CAN_PACKET_SET_ACCEL_CURRENT:
 			ind = 0;
 			accel_current =(buffer_get_float32(data8, 1e3, &ind));
+			dI = accel_current / 600.0;
 			timeout_reset();
 			break;
 
@@ -1643,6 +1646,10 @@ static void decode_msg(uint32_t eid, uint8_t *data8, int len, bool is_replaced) 
 				case 3:
 					state_now++;
 					mc_interface_set_pid_speed(-reset_speed);
+					break;
+				case 4:
+					state_now++;
+					mc_interface_set_current(accel_current);
 					break;
 				default:
 					break;

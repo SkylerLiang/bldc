@@ -31,6 +31,7 @@ typedef enum {
 	CUSTOM_MODE_1,
 	CUSTOM_MODE_2,
 	CUSTOM_MODE_3,
+	CUSTOM_MODE_4,
 } CUSTOM_MODE;
 typedef enum {
 	HW_TYPE_VESC = 0,
