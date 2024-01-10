@@ -57,7 +57,8 @@ float max_speed_pos_record = 0;
 float reset_pos = 0;
 float reset_pos_deadband = 0.2;
 
-int16_t speed_record[3000] = {0};
+int16_t speed_record[2000] = {0};
+int16_t pos_record[2000] = {0};
 uint16_t record_counter = 0;
 
 int16_t accel_counter = 0;
@@ -73,7 +74,8 @@ extern float brake_current;
 extern CUSTOM_MODE custom_mode;
 extern float reset_pos_sample_points;
 
-extern int send_counter;
+extern int send_counter_speed;
+extern int send_counter_pos;
 
 static volatile bool m_dccal_done = false;
 static volatile float m_last_adc_isr_duration;
@@ -3554,12 +3556,14 @@ void mcpwm_foc_adc_int_handler(void *p, uint32_t flags) {
 		sampled_points = 0;
 		max_speed_record = 0;
 		max_speed_pos_record = 0;
-		send_counter = 0;
+		send_counter_speed = 0;
+		send_counter_pos = 0;
 		record_counter = 0;
 	} else if (custom_mode == CUSTOM_MODE_1) {
 		if (finish_flag == 0) {
-			if (record_counter < 3000) {
-				speed_record[record_counter++] = (int16_t)mc_interface_get_rpm();
+			if (record_counter < 2000) {
+				speed_record[record_counter] = (int16_t)mc_interface_get_rpm();
+				pos_record[record_counter++] = (int16_t)(mul_pos * 25);
 			}
 			switch (state_now) {
 			case 1:
@@ -3644,6 +3648,10 @@ void mcpwm_foc_adc_int_handler(void *p, uint32_t flags) {
 		}
 	} else if (custom_mode == CUSTOM_MODE_4) {
 		if (finish_flag == 0) {
+			if (record_counter < 2000) {
+				speed_record[record_counter] = (int16_t)mc_interface_get_rpm();
+				pos_record[record_counter++] = (int16_t)(mul_pos * 25);
+			}
 			switch (state_now) {
 			case 1:
 				sumI += dI;

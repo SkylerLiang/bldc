@@ -54,7 +54,8 @@ float brake_current = 60.0f;
 CUSTOM_MODE custom_mode = CUSTOM_MODE_NONE;
 int reset_pos_sample_points = 10000;
 float reset_speed = 1000;
-int send_counter = 0;
+int send_counter_speed = 0;
+int send_counter_pos = 0;
 
 extern float mul_pos;
 extern float brake_pos;
@@ -64,7 +65,8 @@ extern uint8_t state_now;
 extern float max_speed_record;
 extern float max_speed_pos_record;
 
-extern int16_t speed_record[3000];
+extern int16_t speed_record[2000];
+extern int16_t pos_record[2000];
 extern uint16_t record_counter;
 
 extern float dI;
@@ -1207,11 +1209,11 @@ void comm_can_send_status3(uint8_t id, bool replace) {
 void comm_can_send_status4(uint8_t id, bool replace) {
 	int32_t send_index = 0;
 	uint8_t buffer[8];
-	if (send_counter <= record_counter && send_counter < 2900 && finish_flag == 1) {
+	if (send_counter_speed <= record_counter && send_counter_speed < 2000 && finish_flag == 1) {
 		for (int i = 0; i < 4; i++) {
-			if(send_counter < record_counter) {
-				buffer_append_int16(buffer, (int16_t)(speed_record[send_counter++]), &send_index);
-				speed_record[send_counter - 1] = 0;
+			if(send_counter_speed < record_counter) {
+				buffer_append_int16(buffer, (int16_t)(speed_record[send_counter_speed++]), &send_index);
+				speed_record[send_counter_speed - 1] = 0;
 			} else {
 				buffer_append_int16(buffer, (int16_t)(0), &send_index);
 			}
@@ -1229,11 +1231,25 @@ void comm_can_send_status4(uint8_t id, bool replace) {
 void comm_can_send_status5(uint8_t id, bool replace) {
 	int32_t send_index = 0;
 	uint8_t buffer[8];
-	buffer_append_int32(buffer, mc_interface_get_tachometer_value(false), &send_index);
-	buffer_append_int16(buffer, (int16_t)(mc_interface_get_input_voltage_filtered() * 1e1), &send_index);
-	buffer_append_int16(buffer, 0, &send_index); // Reserved for now
-	comm_can_transmit_eid_replace(id | ((uint32_t)CAN_PACKET_STATUS_5 << 8),
+	if (send_counter_pos <= record_counter && send_counter_pos < 2000 && finish_flag == 1) {
+		for (int i = 0; i < 4; i++) {
+			if(send_counter_pos < record_counter) {
+				buffer_append_int16(buffer, (int16_t)(pos_record[send_counter_pos++]), &send_index);
+				pos_record[send_counter_pos - 1] = 0;
+			} else {
+				buffer_append_int16(buffer, (int16_t)(0), &send_index);
+			}
+		}
+		comm_can_transmit_eid_replace(id | ((uint32_t)CAN_PACKET_STATUS_5 << 8),
 			buffer, send_index, replace, 0);
+	}
+	// int32_t send_index = 0;
+	// uint8_t buffer[8];
+	// buffer_append_int32(buffer, mc_interface_get_tachometer_value(false), &send_index);
+	// buffer_append_int16(buffer, (int16_t)(mc_interface_get_input_voltage_filtered() * 1e1), &send_index);
+	// buffer_append_int16(buffer, 0, &send_index); // Reserved for now
+	// comm_can_transmit_eid_replace(id | ((uint32_t)CAN_PACKET_STATUS_5 << 8),
+	// 		buffer, send_index, replace, 0);
 }
 
 void comm_can_send_status6(uint8_t id, bool replace) {
