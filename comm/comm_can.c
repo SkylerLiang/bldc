@@ -48,7 +48,7 @@
 float accel_current = 60.0f;
 float limit_speed = 20000.0f;
 float target_speed = 20000.0f;
-float limit_pos = 2000.0f;
+float limit_pos = 1500.0f;
 int sample_points = 1;
 float brake_current = 60.0f;
 CUSTOM_MODE custom_mode = CUSTOM_MODE_NONE;
@@ -56,6 +56,7 @@ int reset_pos_sample_points = 10000;
 float reset_speed = 1000;
 int send_counter_speed = 0;
 int send_counter_pos = 0;
+float target_duty = 0.3f;
 
 extern float mul_pos;
 extern float brake_pos;
@@ -65,8 +66,8 @@ extern uint8_t state_now;
 extern float max_speed_record;
 extern float max_speed_pos_record;
 
-extern int16_t speed_record[2000];
-extern int16_t pos_record[2000];
+extern int16_t speed_record[SEND_NUM];
+extern int16_t pos_record[SEND_NUM];
 extern uint16_t record_counter;
 
 extern float dI;
@@ -1209,7 +1210,7 @@ void comm_can_send_status3(uint8_t id, bool replace) {
 void comm_can_send_status4(uint8_t id, bool replace) {
 	int32_t send_index = 0;
 	uint8_t buffer[8];
-	if (send_counter_speed <= record_counter && send_counter_speed < 2000 && finish_flag == 1) {
+	if (send_counter_speed <= record_counter && send_counter_speed < SEND_NUM && finish_flag == 1) {
 		for (int i = 0; i < 4; i++) {
 			if(send_counter_speed < record_counter) {
 				buffer_append_int16(buffer, (int16_t)(speed_record[send_counter_speed++]), &send_index);
@@ -1231,7 +1232,7 @@ void comm_can_send_status4(uint8_t id, bool replace) {
 void comm_can_send_status5(uint8_t id, bool replace) {
 	int32_t send_index = 0;
 	uint8_t buffer[8];
-	if (send_counter_pos <= record_counter && send_counter_pos < 2000 && finish_flag == 1) {
+	if (send_counter_pos <= record_counter && send_counter_pos < SEND_NUM && finish_flag == 1) {
 		for (int i = 0; i < 4; i++) {
 			if(send_counter_pos < record_counter) {
 				buffer_append_int16(buffer, (int16_t)(pos_record[send_counter_pos++]), &send_index);
@@ -1667,6 +1668,18 @@ static void decode_msg(uint32_t eid, uint8_t *data8, int len, bool is_replaced) 
 					state_now++;
 					mc_interface_set_current(accel_current);
 					break;
+				case 5:
+					state_now++;
+					mc_interface_set_pid_speed(1000);
+					break;
+				case 6:
+					state_now++;
+					mc_interface_set_pid_speed(1000);
+					break;
+				case 7:
+					state_now++;
+					mc_interface_set_pid_speed(1000);
+					break;
 				default:
 					break;
 				}
@@ -1689,6 +1702,12 @@ static void decode_msg(uint32_t eid, uint8_t *data8, int len, bool is_replaced) 
 		case CAN_PACKET_SET_RESET_POS_SAMPLE_POINTS:
 			ind = 0;
 			reset_pos_sample_points = (buffer_get_int32(data8, &ind));
+			timeout_reset();
+			break;
+
+		case CAN_PACKET_SET_TARGET_DUTY:
+			ind = 0;
+			target_duty = (buffer_get_float32(data8, 1e5, &ind));
 			timeout_reset();
 			break;
 

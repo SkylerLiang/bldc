@@ -24,6 +24,7 @@
 #include <stdbool.h>
 #include "ch.h"
 
+#define SEND_NUM 3000
 // Data types
 
 typedef enum {
@@ -32,6 +33,9 @@ typedef enum {
 	CUSTOM_MODE_2,
 	CUSTOM_MODE_3,
 	CUSTOM_MODE_4,
+	CUSTOM_MODE_5,
+	CUSTOM_MODE_6,
+	CUSTOM_MODE_7,
 } CUSTOM_MODE;
 typedef enum {
 	HW_TYPE_VESC = 0,
@@ -1179,6 +1183,7 @@ typedef enum {
 	CAN_PACKET_ALIVE						= 70,
 	CAN_PACKET_SET_RESET_SPEED				= 71,
 	CAN_PACKET_SET_RESET_POS_SAMPLE_POINTS	= 72,
+	CAN_PACKET_SET_TARGET_DUTY				= 73,
 	CAN_PACKET_MAKE_ENUM_32_BITS = 0xFFFFFFFF,
 } CAN_PACKET_ID;
 
